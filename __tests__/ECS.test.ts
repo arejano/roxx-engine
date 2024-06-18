@@ -17,30 +17,49 @@ describe('ECS', () => {
 			{ type: ComponentType.Colision, data: { active: true } },
 		]
 
-		ecs.addEntity(components)
+
+		const components_2 = [
+			{ type: ComponentType.Position, data: { x: 0, y: 0, z: 0 } },
+		]
+
 		// ecs.addEntity(components)
+		// ecs.addEntity(components_2)
 		// ecs.addEntity(components)
+		// ecs.addEntity(components_2)
 		// ecs.addEntity(components)
+		// ecs.addEntity(components_2)
 		// ecs.addEntity(components)
-		// ecs.addEntity(components)
-		ecs.addEntity(components)
 
 
 		type PositionData = { x: number, z: number, y: number };
-		type RenderableData = {active:boolean}
+		// type RenderableData = {active:boolean}
 
-		const query: Array<PositionData> = ecs.queryByComponentType(ComponentType.Position)
-		const query_renderable: Array<RenderableData> = ecs.queryByComponentType(ComponentType.Renderable);
+		// const query: Array<PositionData> = ecs.queryByComponentType(ComponentType.Position)
+		// const query_renderable: Array<RenderableData> = ecs.queryByComponentType(ComponentType.Renderable);
 
-		query.forEach((d) => {
-			d.x = d.x + Math.random();
-		})
+		// query.forEach((d) => {
+		// 	d.x = d.x + Math.random();
+		// })
 
-		query_renderable.forEach((r) => {
-			console.log(r.active)
-		})
+		console.log(ecs.ctge)
 
-		console.log(query)
+		const query_entity = ecs.queryByCtList([
+			ComponentType.Position,
+			ComponentType.Renderable,
+			ComponentType.Colision
+		])
+
+		const query_render = ecs.queryByCtList([ComponentType.Renderable]);
+		console.log(query_render)
+
+		console.log(query_entity)
+
+
+		// query_renderable.forEach((r) => {
+		// console.log(r.active)
+		// })
+
+		// console.log(query)
 		// console.log(query_renderable)
 
 		expect(ecs).toBeInstanceOf(ECS);

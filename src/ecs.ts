@@ -1,7 +1,8 @@
-var counter_entity: number = 0;
-var counter_component: number = 0;
+var counter_entity: number = 1;
+var counter_component: number = 1;
 
 export enum ComponentType {
+	DontUsee,
 	Position,
 	Renderable,
 	Camera,
@@ -19,6 +20,15 @@ export class ECS {
 	entities_by_component: Record<number, Array<number>> = [];
 	components: Record<number, any> = [];
 	components_by_type: Record<number, any> = [];
+
+	//Entity_ComponentType
+	ect: Record<number, Array<number>> = [];
+
+	//ComponentType_Length
+	ctl: Record<number, number> = [];
+
+	//ComponentType_Group -> Entity
+	ctge: Record<number, Array<number>> = [];
 
 	constructor() {
 	}
@@ -52,6 +62,22 @@ export class ECS {
 		} else {
 			this.components_by_type[ct] = [id]
 		}
+
+		//Atualizar ComponentTypeLength
+		if (this.components_by_type[ct]) {
+			this.ctl[ct] = this.components_by_type[ct].length;
+		}
+		//Atualizar Entity -> ComponentType[]
+		if (!this.ect[entity]) { this.ect[entity] = [] }
+		this.ect[entity].push(ct)
+
+		// console.log("ect",this.ect)
+
+		//Atualizar  CTGE
+		const ctge_key = parseInt(this.ect[entity].join(''));
+		if (!this.ctge[ctge_key]) { this.ctge[ctge_key] = [] }
+		this.ctge[ctge_key].push(entity)
+
 	}
 
 	queryByComponentType(ct: ComponentType): Array<any> {
@@ -59,6 +85,12 @@ export class ECS {
 			.map((id: number) => {
 				return this.components[id]
 			})
+	}
+
+	//TODO: Refatorar para validar o tipo de retorno, valoe o QueryResult??
+	queryByCtList(types: Array<ComponentType>): number[] {
+		const key = parseInt(types.join(''))
+		return this.ctge[key] ? this.ctge[key] : this.ect[key] ?? null;
 	}
 }
 
