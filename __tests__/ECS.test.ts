@@ -1,13 +1,12 @@
 import { ECS } from "../src/ecs";
 import { ComponentType } from "../src/enums";
 
-describe('ECS', () => {
-})
-
 describe('World', () => {
 	var ecs = new ECS();
 	var player = undefined;
 	var enemy = undefined;
+
+	var query_many: { [key: number]: number[] };
 
 	var log_table = {
 		qt_entidades: 0,
@@ -15,17 +14,8 @@ describe('World', () => {
 		qt_tipos_componentes: 0,
 		qt_entity_ct_to_components: 0,
 		qt_position_entity: 0,
+		qt_query_many: 0
 	}
-
-	ecs.addEntity([
-		{ type: ComponentType.Name, data: { name: "Francisco" } },
-		{ type: ComponentType.Player, data: true },
-		{ type: ComponentType.Position, data: { x: 0, y: 0, z: 0 } },
-		{ type: ComponentType.Renderable, data: { active: true } },
-		{ type: ComponentType.Colision, data: { active: true } },
-	])
-
-
 
 	it('Start ECS', () => {
 		ecs = new ECS();
@@ -36,6 +26,7 @@ describe('World', () => {
 		player = ecs.addEntity([
 			{ type: ComponentType.Name, data: { name: "Gustavo" } },
 			{ type: ComponentType.Player, data: true },
+			{ type: ComponentType.Health, data: { life: 100 } },
 			{ type: ComponentType.Position, data: { x: 0, y: 0, z: 0 } },
 			{ type: ComponentType.Renderable, data: { active: true } },
 			{ type: ComponentType.Colision, data: { active: true } },
@@ -44,15 +35,15 @@ describe('World', () => {
 		enemy = ecs.addEntity([
 			{ type: ComponentType.Name, data: { name: "Jorge" } },
 			{ type: ComponentType.Enemy, data: true },
+			{ type: ComponentType.Health, data: { life: 100 } },
 			{ type: ComponentType.Position, data: { x: 0, y: 0, z: 0 } },
 			{ type: ComponentType.Renderable, data: { active: true } },
 			{ type: ComponentType.Colision, data: { active: true } },
 		])
 
-		for (let i = 0; i < 10000; i++) {
+		for (let i = 0; i < 500; i++) {
 			ecs.addEntity([
-				{ type: ComponentType.Name, data: { name: "Random" } },
-				{ type: ComponentType.Enemy, data: true },
+				{ type: ComponentType.Bullet, data: true },
 				{ type: ComponentType.Position, data: { x: 0, y: 0, z: 0 } },
 				{ type: ComponentType.Renderable, data: { active: true } },
 				{ type: ComponentType.Colision, data: { active: true } },
@@ -60,11 +51,12 @@ describe('World', () => {
 
 		}
 		expect(player).toBeGreaterThan(0);
+		expect(enemy).toBeGreaterThan(0);
 	})
 
 	type PositionData = { id: number, data: { x: number, y: number, z: number } }
 
-	it('Query Components By CT', () => {
+	it('QueryComponentsByType', () => {
 		const query: PositionData[] = ecs.queryComponentByType(ComponentType.Position);
 		query.forEach((data: PositionData) => {
 			data.data.z += 1
@@ -73,6 +65,21 @@ describe('World', () => {
 
 		expect(ecs).toBeInstanceOf(ECS);
 	});
+
+	it('QueryEntitiesByCtGroup', () => {
+		query_many = ecs.queryEntitiesByCtGroup([
+			// ComponentType.Name,
+			ComponentType.Player,
+			ComponentType.Position,
+			// ComponentType.Health,
+			ComponentType.Bullet,
+			ComponentType.Renderable,
+			// ComponentType.Enemy,
+		]);
+
+		log_table.qt_query_many = Object.keys(query_many).length
+	});
+
 
 
 	it("Update Counters", () => {
@@ -84,7 +91,6 @@ describe('World', () => {
 
 	it('Console', () => {
 		console.table(log_table)
-
 	});
 })
 

@@ -10,7 +10,9 @@ export class ECS {
 	entities: Record<number, number[]> = [];
 	components: Record<number, any> = [];
 
-	addEntity( components: ComponentRegister[] ): number {
+	e_ct: Record<number, number[]> = [];
+
+	addEntity(components: ComponentRegister[]): number {
 		const entity_id = counter_entity++;
 		this.entities[entity_id] = [];
 
@@ -25,6 +27,9 @@ export class ECS {
 	registerComponent(entity_id: number, ct: ComponentType, component_id: number) {
 		//Update: Entity -> Component[]
 		this.add(this.entities[entity_id], component_id)
+
+		if (!this.e_ct[entity_id]) { this.e_ct[entity_id] = [] }
+		this.add(this.e_ct[entity_id], ct)
 
 		//Update: ComponentType -> Component[]
 		if (!this.ct[ct]) { this.ct[ct] = [] }
@@ -47,20 +52,87 @@ export class ECS {
 
 	// Query : Todos os componentes e seu valores a partir de um ComponentTye
 	queryComponentByType(ct: ComponentType): { id: number, data: any }[] {
-		var result: { id: number, data: any }[] = []
-		this.cte[ct].map((entity_id) => {
-			const key = parseInt(`${entity_id}${ct}`)
-			const component_id = this.ect[key];
+		const result: { id: number, data: any }[] = [];
+		const entities = this.cte[ct] || [];  // Certifique-se de que entities não é undefined
+
+		entities.forEach(entity_id => {
+			const key = `${entity_id}${ct}`;
+			const component_id = this.ect[parseInt(key)];
 			result.push({
 				id: component_id,
 				data: this.components[component_id]
-			})
-		})
+			});
+		});
+
 		return result;
 	}
 
-}
+	queryGroup(cts: ComponentType[]): { [key: number]: number[] } {
+		var queryGroups: any[] = []
+		cts.forEach((ct) => {
+			queryGroups.push(this.cte[ct])
+		})
 
+		return this.findCommonElements(queryGroups);
+	}
+
+
+	queryEntitiesByCtGroup(cts: ComponentType[]): any[] {
+		if (cts.length === 1) { return this.cte[cts[0]] }
+
+		const groups: number[][] = cts.map(ct => this.cte[ct] || []);
+		const pass: number[] = []
+		const entityCount: Record<number, number> = [];
+
+		groups.forEach(group => {
+			group.forEach(entity_id => {
+				if (entityCount[entity_id] === undefined) {
+					entityCount[entity_id] = 0;
+				}
+				entityCount[entity_id]++;
+			});
+		});
+
+		const requiredCount = cts.length;
+
+		Object.keys(entityCount).forEach(entity_id => {
+			if (entityCount[parseInt(entity_id)] === requiredCount) {
+				let containsAll = true;
+
+				for (const ct of cts) {
+					if (!this.e_ct[parseInt(entity_id)].includes(ct)) {
+						containsAll = false;
+						break;
+					}
+				}
+
+				if (containsAll) {
+					pass.push(parseInt(entity_id));
+				}
+			}
+		}); return pass;
+	}
+
+	findCommonElements(data: { [key: number]: number[] }): { [key: number]: number[] } {
+		// Convert all arrays to sets for easy intersection operations
+		const sets = Object.values(data).map(arr => new Set(arr));
+
+		// Use the first set as the base for intersection
+		const commonElements = [...sets[0]].filter(value =>
+			sets.every(set => set.has(value))
+		);
+
+		// Create the result object with the common elements
+		const result: { [key: number]: number[] } = {};
+		for (const key in data) {
+			result[key] = commonElements;
+		}
+
+		return result;
+	}
+
+
+}
 
 type ComponentRegister = {
 	type: ComponentType,

@@ -1,11 +1,12 @@
 export enum ComponentType {
 	DontUsee,
+	Player,
+	Enemy,
 	Name,
 	Position,
 	Renderable,
 	Camera,
 	Colision,
-	Player,
-	Enemy,
-	Health
+	Health,
+	Bullet
 }
