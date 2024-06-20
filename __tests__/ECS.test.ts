@@ -1,4 +1,5 @@
-import { ComponentType, ECS } from "../src/ecs";
+import { ECS } from "../src/ecs";
+import { ComponentType } from "../src/enums";
 
 describe('ECS', () => {
 })
@@ -7,6 +8,14 @@ describe('World', () => {
 	var ecs = new ECS();
 	var player = undefined;
 	var enemy = undefined;
+
+	var log_table = {
+		qt_entidades: 0,
+		qt_componentes: 0,
+		qt_tipos_componentes: 0,
+		qt_entity_ct_to_components: 0,
+		qt_position_entity: 0,
+	}
 
 	ecs.addEntity([
 		{ type: ComponentType.Name, data: { name: "Francisco" } },
@@ -40,91 +49,42 @@ describe('World', () => {
 			{ type: ComponentType.Colision, data: { active: true } },
 		])
 
+		for (let i = 0; i < 10000; i++) {
+			ecs.addEntity([
+				{ type: ComponentType.Name, data: { name: "Random" } },
+				{ type: ComponentType.Enemy, data: true },
+				{ type: ComponentType.Position, data: { x: 0, y: 0, z: 0 } },
+				{ type: ComponentType.Renderable, data: { active: true } },
+				{ type: ComponentType.Colision, data: { active: true } },
+			])
 
+		}
 		expect(player).toBeGreaterThan(0);
 	})
 
 	type PositionData = { id: number, data: { x: number, y: number, z: number } }
-	type NameData = { id: number, data: { name: string } }
 
-	it('Query Components By ComponentType', () => {
+	it('Query Components By CT', () => {
 		const query: PositionData[] = ecs.queryComponentByType(ComponentType.Position);
-		console.log(query)
 		query.forEach((data: PositionData) => {
 			data.data.z += 1
 		})
-		console.log(query)
-
-		const names: NameData[] = ecs.queryComponentByType(ComponentType.Name);
-		console.log(names)
-		names.forEach((n: any) => {
-			// console.log(n.data.name)
-			if (n.data.name == "Gustavo") {
-				n.data.name = "Gustavo Arejano"
-			}
-		})
-		console.log(names)
+		log_table.qt_position_entity = query.length;
 
 		expect(ecs).toBeInstanceOf(ECS);
 	});
 
 
-	it("Query player Entity", () => {
-		// const query = ecs.queryEntitiesByComponentType(ComponentType.Player);
-		// console.log(ecs.entities)
-		// console.log(Object.keys(ecs.entities_by_ctype))
-		// console.log(Object.values(ecs.entities_by_ctype))
-		// console.log(query)
-		// console.log(Object.keys(ecs.ect))
-		// console.log(Object.values(ecs.ect))
+	it("Update Counters", () => {
+		log_table.qt_entidades = Object.keys(ecs.entities).length;
+		log_table.qt_componentes = Object.keys(ecs.components).length;
+		log_table.qt_tipos_componentes = Object.keys(ecs.ct).length
+		log_table.qt_entity_ct_to_components = Object.keys(ecs.ect).length
 	})
 
-	it('Mock', () => {
+	it('Console', () => {
+		console.table(log_table)
 
-		// const components = [
-		// ]
-
-
-		// const components_2 = [
-		// 	{ type: ComponentType.Position, data: { x: 0, y: 0, z: 0 } },
-		// ]
-
-		// ecs.addEntity(components)
-		// ecs.addEntity(components_2)
-		// ecs.addEntity(components)
-		// ecs.addEntity(components_2)
-		// ecs.addEntity(components)
-		// ecs.addEntity(components_2)
-		// ecs.addEntity(components)
-
-
-		// type PositionData = { x: number, z: number, y: number };
-		// type RenderableData = {active:boolean}
-
-		// const query: Array<PositionData> = ecs.queryByComponentType(ComponentType.Position)
-		// const query_renderable: Array<RenderableData> = ecs.queryByComponentType(ComponentType.Renderable);
-
-		// query.forEach((d) => {
-		// 	d.x = d.x + Math.random();
-		// })
-
-
-		// const query_entity = ecs.queryByCtList([
-		// 	ComponentType.Position,
-		// 	ComponentType.Renderable,
-		// 	ComponentType.Colision
-		// ])
-
-		// const query_render = ecs.queryByCtList([ComponentType.Renderable]);
-
-		// query_renderable.forEach((r) => {
-		// console.log(r.active)
-		// })
-
-		// console.log(query)
-		// console.log(query_renderable)
-
-		expect(ecs).toBeInstanceOf(ECS);
 	});
 })
 

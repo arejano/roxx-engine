@@ -1,22 +1,6 @@
+import { ComponentType } from "./enums";
 var counter_entity: number = 1;
 var counter_component: number = 1;
-
-export enum ComponentType {
-	DontUsee,
-	Name,
-	Position,
-	Renderable,
-	Camera,
-	Colision,
-	Player,
-	Enemy,
-	Health
-}
-
-type ComponentRegister = {
-	type: ComponentType,
-	data: any
-}
 
 export class ECS {
 	//Entity_ComponentType -> Component
@@ -26,11 +10,7 @@ export class ECS {
 	entities: Record<number, number[]> = [];
 	components: Record<number, any> = [];
 
-	constructor() { }
-
-	addEntity(
-		components: ComponentRegister[]
-	): number {
+	addEntity( components: ComponentRegister[] ): number {
 		const entity_id = counter_entity++;
 		this.entities[entity_id] = [];
 
@@ -42,14 +22,9 @@ export class ECS {
 		return entity_id;
 	}
 
-	registerComponent(
-		entity_id: number,
-		ct: ComponentType,
-		component_id: number
-	) {
+	registerComponent(entity_id: number, ct: ComponentType, component_id: number) {
 		//Update: Entity -> Component[]
 		this.add(this.entities[entity_id], component_id)
-
 
 		//Update: ComponentType -> Component[]
 		if (!this.ct[ct]) { this.ct[ct] = [] }
@@ -70,7 +45,6 @@ export class ECS {
 		}
 	}
 
-
 	// Query : Todos os componentes e seu valores a partir de um ComponentTye
 	queryComponentByType(ct: ComponentType): { id: number, data: any }[] {
 		var result: { id: number, data: any }[] = []
@@ -87,12 +61,8 @@ export class ECS {
 
 }
 
-export class Component {
-	data: any;
-	id: number;
 
-	constructor(d: any) {
-		this.data = d;
-		this.id = counter_component++;
-	}
+type ComponentRegister = {
+	type: ComponentType,
+	data: any
 }
