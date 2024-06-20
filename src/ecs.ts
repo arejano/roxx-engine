@@ -3,10 +3,14 @@ var counter_component: number = 1;
 
 export enum ComponentType {
 	DontUsee,
+	Name,
 	Position,
 	Renderable,
 	Camera,
-	Colision
+	Colision,
+	Player,
+	Enemy,
+	Health
 }
 
 type ComponentRegister = {
@@ -15,83 +19,72 @@ type ComponentRegister = {
 }
 
 export class ECS {
-
-	entities: Record<number, number> = [];
-	entities_by_component: Record<number, Array<number>> = [];
+	//Entity_ComponentType -> Component
+	ect: Record<number, number> = [];
+	cte: Record<number, number[]> = []
+	ct: Record<number, any> = [];
+	entities: Record<number, number[]> = [];
 	components: Record<number, any> = [];
-	components_by_type: Record<number, any> = [];
 
-	//Entity_ComponentType
-	ect: Record<number, Array<number>> = [];
-
-	//ComponentType_Length
-	ctl: Record<number, number> = [];
-
-	//ComponentType_Group -> Entity
-	ctge: Record<number, Array<number>> = [];
-
-	constructor() {
-	}
+	constructor() { }
 
 	addEntity(
-		components: Array<ComponentRegister>
-	) {
-		const new_entity = counter_entity++;
-		this.entities[new_entity] = new_entity;
+		components: ComponentRegister[]
+	): number {
+		const entity_id = counter_entity++;
+		this.entities[entity_id] = [];
 
 		components.forEach((c) => {
 			const component_id = counter_component++;
 			this.components[component_id] = Object.assign({}, c.data);
-			this.registerComponent(new_entity, c.type, component_id)
+			this.registerComponent(entity_id, c.type, component_id)
 		});
+		return entity_id;
 	}
 
 	registerComponent(
-		entity: number,
+		entity_id: number,
 		ct: ComponentType,
-		id: number
+		component_id: number
 	) {
-		if (this.entities_by_component[id]) {
-			this.entities_by_component[id].push(entity);
-		} else {
-			this.entities_by_component[id] = [entity]
-		}
+		//Update: Entity -> Component[]
+		this.add(this.entities[entity_id], component_id)
 
-		if (this.components_by_type[ct]) {
-			this.components_by_type[ct].push(id);
-		} else {
-			this.components_by_type[ct] = [id]
-		}
 
-		//Atualizar ComponentTypeLength
-		if (this.components_by_type[ct]) {
-			this.ctl[ct] = this.components_by_type[ct].length;
-		}
-		//Atualizar Entity -> ComponentType[]
-		if (!this.ect[entity]) { this.ect[entity] = [] }
-		this.ect[entity].push(ct)
+		//Update: ComponentType -> Component[]
+		if (!this.ct[ct]) { this.ct[ct] = [] }
+		this.add(this.ct[ct], component_id)
 
-		// console.log("ect",this.ect)
+		//Udate ComponentType -> Entity[]
+		if (!this.cte[ct]) { this.cte[ct] = [] }
+		this.add(this.cte[ct], entity_id)
 
-		//Atualizar  CTGE
-		const ctge_key = parseInt(this.ect[entity].join(''));
-		if (!this.ctge[ctge_key]) { this.ctge[ctge_key] = [] }
-		this.ctge[ctge_key].push(entity)
-
+		//Update Entity+ComponentTye -> Component
+		const key = parseInt(`${entity_id}${ct}`)
+		this.ect[key] = component_id
 	}
 
-	queryByComponentType(ct: ComponentType): Array<any> {
-		return this.components_by_type[ct]
-			.map((id: number) => {
-				return this.components[id]
+	add(list: number[], item: number) {
+		if (!list.includes(item)) {
+			list.push(item)
+		}
+	}
+
+
+	// Query : Todos os componentes e seu valores a partir de um ComponentTye
+	queryComponentByType(ct: ComponentType): { id: number, data: any }[] {
+		var result: { id: number, data: any }[] = []
+		this.cte[ct].map((entity_id) => {
+			const key = parseInt(`${entity_id}${ct}`)
+			const component_id = this.ect[key];
+			result.push({
+				id: component_id,
+				data: this.components[component_id]
 			})
+		})
+		return result;
 	}
 
-	//TODO: Refatorar para validar o tipo de retorno, valoe o QueryResult??
-	queryByCtList(types: Array<ComponentType>): number[] {
-		const key = parseInt(types.join(''))
-		return this.ctge[key] ? this.ctge[key] : this.ect[key] ?? null;
-	}
 }
 
 export class Component {
