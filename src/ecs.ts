@@ -1,6 +1,9 @@
-import { ComponentType } from "./enums";
+import { ComponentType, GameEvent, GameMode } from "./enums";
+
+//Counters
 var counter_entity: number = 1;
 var counter_component: number = 1;
+var counter_system: number = 0;
 
 export class ECS {
 	//Entity_ComponentType -> Component
@@ -12,7 +15,7 @@ export class ECS {
 
 	e_ct: Record<number, number[]> = [];
 
-	addEntity(components: ComponentRegister[]): number {
+	addEntity(components: { type: ComponentType, data: any }[]): number {
 		const entity_id = counter_entity++;
 		this.entities[entity_id] = [];
 
@@ -67,14 +70,16 @@ export class ECS {
 		return result;
 	}
 
-	queryGroup(cts: ComponentType[]): { [key: number]: number[] } {
-		var queryGroups: any[] = []
-		cts.forEach((ct) => {
-			queryGroups.push(this.cte[ct])
-		})
-
-		return this.findCommonElements(queryGroups);
+	queryComponentByCtFromEntities(entities: number[], ct: ComponentType): any[] {
+		const components = []
+		for (const id of entities) {
+			const key = parseInt(`${id}${ct}`)
+			// components.push(this.components[this.ect[key]])
+			components.push(this.ect[key])
+		}
+		return components;
 	}
+
 
 
 	queryEntitiesByCtGroup(cts: ComponentType[]): any[] {
@@ -112,29 +117,36 @@ export class ECS {
 			}
 		}); return pass;
 	}
-
-	findCommonElements(data: { [key: number]: number[] }): { [key: number]: number[] } {
-		// Convert all arrays to sets for easy intersection operations
-		const sets = Object.values(data).map(arr => new Set(arr));
-
-		// Use the first set as the base for intersection
-		const commonElements = [...sets[0]].filter(value =>
-			sets.every(set => set.has(value))
-		);
-
-		// Create the result object with the common elements
-		const result: { [key: number]: number[] } = {};
-		for (const key in data) {
-			result[key] = commonElements;
-		}
-
-		return result;
-	}
-
-
 }
 
-type ComponentRegister = {
-	type: ComponentType,
-	data: any
+//System
+interface ISystem {
+	game_mode: GameMode;
+	events: GameEvent[];
+	start(w: ECS): void;
+	process(w: ECS): void;
+	destroy(w: ECS): void;
+}
+
+export class MovementSystem implements ISystem {
+	game_mode: GameMode = GameMode.Running;
+	events: GameEvent[] = [GameEvent.Movement, GameEvent.Keyboard];
+
+	start(w: ECS): void { return }
+
+	process(w: ECS): void {
+		const entities = w.queryEntitiesByCtGroup([
+			ComponentType.Position,
+			ComponentType.Direction,
+			ComponentType.Player,
+			ComponentType.Movable,
+		])
+		const position = w.queryComponentByCtFromEntities(entities, ComponentType.Position)
+		const name = w.queryComponentByCtFromEntities(entities, ComponentType.Name)
+		var health = w.queryComponentByCtFromEntities(entities, ComponentType.Health)
+
+	}
+
+	destroy(w: ECS): void { return }
+
 }

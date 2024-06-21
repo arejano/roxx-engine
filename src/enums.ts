@@ -1,5 +1,5 @@
 export enum ComponentType {
-	DontUsee,
+	DontUse,
 	Player,
 	Enemy,
 	Name,
@@ -8,5 +8,21 @@ export enum ComponentType {
 	Camera,
 	Colision,
 	Health,
-	Bullet
+	Bullet,
+	Movable,
+	Direction,
+}
+
+export enum GameMode {
+	DontUse,
+	Menu,
+	Running,
+	Pause,
+}
+
+export enum GameEvent {
+	DontUse,
+	Tick,
+	Movement,
+	Keyboard,
 }
