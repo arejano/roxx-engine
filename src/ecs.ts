@@ -5,6 +5,9 @@ var counter_entity: number = 1;
 var counter_component: number = 1;
 var counter_system: number = 0;
 
+//ComponentDataTypes 
+export type PositionData = { x: number, y: number, z: number }
+
 export class ECS {
 	//Entity_ComponentType -> Component
 	ect: Record<number, number> = [];
@@ -54,17 +57,14 @@ export class ECS {
 	}
 
 	// Query : Todos os componentes e seu valores a partir de um ComponentTye
-	queryComponentByType(ct: ComponentType): { id: number, data: any }[] {
-		const result: { id: number, data: any }[] = [];
-		const entities = this.cte[ct] || [];  // Certifique-se de que entities não é undefined
+	queryComponentByType<T>(ct: ComponentType): T[] {
+		const result: T[] = [];
+		const entities = this.cte[ct] || [];
 
 		entities.forEach(entity_id => {
 			const key = `${entity_id}${ct}`;
 			const component_id = this.ect[parseInt(key)];
-			result.push({
-				id: component_id,
-				data: this.components[component_id]
-			});
+			result.push(this.components[component_id]);
 		});
 
 		return result;
@@ -142,9 +142,46 @@ export class MovementSystem implements ISystem {
 			ComponentType.Movable,
 		])
 		const position = w.queryComponentByCtFromEntities(entities, ComponentType.Position)
-		const name = w.queryComponentByCtFromEntities(entities, ComponentType.Name)
-		var health = w.queryComponentByCtFromEntities(entities, ComponentType.Health)
 
+		for (let p of position) {
+			const data: PositionData = w.components[p];
+			const new_position: PositionData = {
+				x: 30,
+				y: data.y + 10,
+				z: data.z + 10
+			}
+			w.components[p] = new_position;
+		}
+
+	}
+
+	destroy(w: ECS): void { return }
+
+}
+
+
+export class PlayerMovementSystem implements ISystem {
+	game_mode: GameMode = GameMode.Running;
+	events: GameEvent[] = [GameEvent.Movement];
+
+	start(w: ECS): void { return }
+
+	process(w: ECS): void {
+		const player: number = w.queryEntitiesByCtGroup([
+			ComponentType.Player,
+			// ComponentType.Enemy,
+			// ComponentType.Name,
+			// ComponentType.Health,
+			// ComponentType.Movable,
+		])[0]
+		const key = parseInt(`${player}${ComponentType.Position}`)
+		const position: PositionData = w.components[w.ect[key]]
+		if (!position) { return }
+		w.components[w.ect[key]] = {
+			x: position.x + 10,
+			y: position.y + 10,
+			z: position.z + 10,
+		};
 	}
 
 	destroy(w: ECS): void { return }

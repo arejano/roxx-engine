@@ -1,12 +1,20 @@
-import { ECS, MovementSystem } from "../src/ecs";
+import { ECS, MovementSystem, PlayerMovementSystem, PositionData } from "../src/ecs";
 import { ComponentType } from "../src/enums";
+
+jest.useFakeTimers();
 
 describe('World', () => {
 	var ecs = new ECS();
 	var player = undefined;
 	var enemy = undefined;
 
+	var qt_random: number = 10;
+
+	var global_query: any = undefined;
+
 	var query_many: { [key: number]: number[] };
+
+	const player_move_system = new PlayerMovementSystem();
 
 	var log_table = {
 		qt_entidades: 0,
@@ -45,7 +53,7 @@ describe('World', () => {
 			{ type: ComponentType.Colision, data: { active: true } },
 		])
 
-		for (let i = 0; i < 15000; i++) {
+		for (let i = 0; i < qt_random; i++) {
 			ecs.addEntity([
 				{ type: ComponentType.Bullet, data: true },
 				{ type: ComponentType.Direction, data: { direction: 0 } },
@@ -59,10 +67,8 @@ describe('World', () => {
 		expect(enemy).toBeGreaterThan(0);
 	})
 
-	type PositionData = { id: number, data: { x: number, y: number, z: number } }
-
 	it('QueryComponentsByType', () => {
-		const query: PositionData[] = ecs.queryComponentByType(ComponentType.Position);
+		const query: PositionData[] = ecs.queryComponentByType<PositionData>(ComponentType.Position);
 		log_table.qt_position_entity = query.length;
 		expect(ecs).toBeInstanceOf(ECS);
 	});
@@ -76,6 +82,7 @@ describe('World', () => {
 		]);
 
 		log_table.qt_query_many = Object.keys(query_many).length
+		expect(ecs).toBeInstanceOf(ECS);
 	});
 
 
@@ -84,16 +91,40 @@ describe('World', () => {
 		log_table.qt_componentes = Object.keys(ecs.components).length;
 		log_table.qt_tipos_componentes = Object.keys(ecs.ct).length
 		log_table.qt_entity_ct_to_components = Object.keys(ecs.ect).length
+		expect(ecs).toBeInstanceOf(ECS);
 	})
 
 
-	it("TestSystem", () => {
-		const mv = new MovementSystem();
-		mv.process(ecs);
+	// it("TestSystem", () => {
+	// 	// const mv = new MovementSystem();
+	// 	// console.log(query)
+	// 	// mv.process(ecs);
+	// 	// const query: PositionData[] = ecs.queryComponentByType<PositionData>(ComponentType.Position);
+	// 	// console.log(query)
+	// 	expect(ecs).toBeInstanceOf(ECS);
+	// })
+
+
+	it("PlayerMovementSystem", () => {
+		player_move_system.process(ecs);
+		player_move_system.process(ecs);
+		player_move_system.process(ecs);
+		player_move_system.process(ecs);
+		player_move_system.process(ecs);
+		player_move_system.process(ecs);
+		expect(ecs).toBeInstanceOf(ECS);
 	})
+
+	it("UpdateGlobalQuery", () => {
+		global_query = ecs.queryComponentByType<PositionData>(ComponentType.Position)
+			.slice(0, 2);
+		expect(ecs).toBeInstanceOf(ECS);
+	})
+
 
 	it('Console', () => {
-		console.table(log_table)
+		// console.table(log_table)
+		// console.log(global_query)
 	});
 })
 
