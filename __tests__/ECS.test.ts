@@ -1,19 +1,19 @@
-import { ECS, EventCall, PlayerMovementSystem, PositionData } from "../src/ecs";
-import { ComponentType, GameEvent, GameMode } from "../src/enums";
+import { ECS, EventCall } from "../src/ecs";
+import { ComponentType, EnemyMovementSystem, GameEvent, GameMode, LogSystem, PlayerMovementSystem, PositionData, RegisterInvisible, RenderSystem } from "../src/game_demo";
 
 jest.useFakeTimers();
 
 describe('World', () => {
-	var ecs = new ECS<GameMode, GameEvent>();
-	var player = undefined;
+	var ecs = new ECS();
+	var player: number = 0;
 	var enemy = undefined;
 
-	var qt_random: number = 10;
+	var qt_random: number = 1;
 	var global_query: any = undefined;
 	var query_many: { [key: number]: number[] };
 
-	var loop_counter = 0;
-	var loop_max_counter = 1;
+	var loop_counter = 1;
+	var loop_max_counter = 4;
 
 	var log_table = {
 		qt_entidades: 0,
@@ -29,7 +29,12 @@ describe('World', () => {
 
 	it('Start ECS', () => {
 		ecs.addSystem(new PlayerMovementSystem())
+		ecs.addSystem(new EnemyMovementSystem())
+		ecs.addSystem(new RenderSystem())
+		// ecs.addSystem(new LogSystem())
+		// ecs.addSystem(new RegisterInvisible())
 		ecs.setGameMode(GameMode.Running);
+		ecs.setTickMode(GameEvent.Tick);
 		expect(ecs).toBeInstanceOf(ECS);
 	});
 
@@ -99,8 +104,37 @@ describe('World', () => {
 		expect(ecs).toBeInstanceOf(ECS);
 	});
 
+	it("Add Invisible to Player", () => {
+		ecs.addComponentToEntity(player, [
+			{ type: ComponentType.Invisible, data: { active: true } },
+		])
+	})
 
-	it("PlayerMovementSystem", () => {
+	it("Add Keyboard Event", () => {
+		const eventCall: EventCall<GameEvent.Keyboard> = {
+			type: GameEvent.Keyboard,
+			data: null
+		}
+
+		const enemyEventMove: EventCall<GameEvent.EnemyKeyboard> = {
+			type: GameEvent.EnemyKeyboard,
+			data: null
+		}
+		ecs.registerEvent(eventCall)
+		ecs.registerEvent(enemyEventMove)
+		ecs.registerEvent(enemyEventMove)
+		ecs.registerEvent(enemyEventMove)
+
+		while (loop_counter <= loop_max_counter) {
+			ecs.registerEvent(eventCall)
+			loop_counter++;
+		}
+
+		loop_counter = 0;
+
+	})
+
+	it("World Loop", () => {
 		while (loop_counter <= loop_max_counter) {
 			ecs.update()
 			loop_counter++;
@@ -130,6 +164,7 @@ describe('World', () => {
 	it('Console', () => {
 		// console.table(log_table)
 		console.log(global_query)
+		// console.log(ecs.pool_event.events)
 	});
 })
 

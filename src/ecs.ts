@@ -1,19 +1,15 @@
-import { ComponentType, GameEvent, GameMode } from "./enums";
-import { Query } from "./query";
-
-//Counters
 var counter_entity: number = 1;
 var counter_component: number = 1;
-var counter_system: number = 0;
+var counter_system: number = 1;
 
-//ComponentDataTypes 
-export type PositionData = { x: number, y: number, z: number }
-
-export class ECS<GM, GE> {
-	//All query in one place
+export class ECS {
 	query_system: Query;
+	pool_event: EventManager<number> = new EventManager<number>();
 
-	game_mode: GM | null = null;
+	game_mode: number | null = null;
+	tick_mode: number | null = null;
+
+	actual_mode: number | null = null;
 
 	//Entity_ComponentType -> Component
 	ect: Record<number, number> = [];
@@ -24,43 +20,61 @@ export class ECS<GM, GE> {
 
 	e_ct: Record<number, number[]> = [];
 
-	//Precisa de GameMode e GameEvent para o cadastro dos sistemas
-	systems: Record<number, ISystem<GM, GE>> = [];
+	systems: Record<number, ISystem> = [];
 	ge_systems: Record<number, number[]> = [];
-
-	pool_event: EventManager<GE> = new EventManager<GE>();
-
 
 	constructor() {
 		this.query_system = new Query(this);
 	}
 
-	setGameMode(gm: GM) {
+	setGameMode(gm: number) {
 		this.game_mode = gm;
+		this.actual_mode = this.game_mode;
 	}
 
-	registerEvent(event: EventCall<GE>) {
+	setTickMode(tm: number) {
+		this.tick_mode = tm;
+	}
+
+	registerEvent(event: EventCall<number>) {
 		this.pool_event.register(event);
 	}
 
 	update() {
 		if (!this.game_mode) { return }
-		if (this.pool_event.hasEvents()) {
+		//Run Systems by Event
+		while (this.pool_event.hasEvents()) {
 			const event = this.pool_event.next();
 			const key = parseInt(`${this.game_mode}${event}`)
-			console.log(key)
-			console.log(Object.values(this.ge_systems))
-			console.log(Object.keys(this.ge_systems))
-			console.log(this.systems)
 
-			// for (const system in Object.values(this.ge_systems[key])) {
-				// console.log(system)
-				// this.systems[system].process(this)
-			// }
+			if (this.ge_systems[key]) {
+				const systems = Object.values(this.ge_systems[key])
+
+				for (const system of systems) {
+					this.systems[system].process(this)
+				}
+			}
+		}
+
+		//Run Tick Systems
+		const tick_key = parseInt(`${this.actual_mode}${this.tick_mode}`)
+		console.log(tick_key)
+		if (!this.ge_systems[tick_key]) {
+			console.log("NULL - RenderSystem")
+			return
+		} else {
+
+			for (const system of this.ge_systems[tick_key]) {
+				if (this.systems[system]) {
+					this.systems[system].process(this)
+				}else{
+					console.log("SystemError")
+				}
+			}
 		}
 	}
 
-	addEntity(components: { type: ComponentType, data: any }[]): number {
+	addEntity(components: { type: number, data: any }[]): number {
 		const entity_id = counter_entity++;
 		this.entities[entity_id] = [];
 
@@ -72,10 +86,19 @@ export class ECS<GM, GE> {
 		return entity_id;
 	}
 
-	addSystem(system: ISystem<GM, GE>) {
+	addComponentToEntity(entity_id: number, components: { type: number, data: any }[]): number {
+		components.forEach((c) => {
+			const component_id = counter_component++;
+			this.components[component_id] = Object.assign({}, c.data);
+			this.registerComponent(entity_id, c.type, component_id)
+		});
+		return entity_id;
+	}
+
+	addSystem(system: ISystem) {
 		const system_id = counter_system++;
 
-		for (const se in system.events) {
+		for (const se of system.events) {
 			const key = parseInt(`${system.game_mode}${se}`)
 			if (!this.ge_systems[key]) {
 				this.ge_systems[key] = []
@@ -86,7 +109,7 @@ export class ECS<GM, GE> {
 		this.systems[system_id] = system;
 	}
 
-	registerComponent(entity_id: number, ct: ComponentType, component_id: number) {
+	registerComponent(entity_id: number, ct: number, component_id: number) {
 		//Update: Entity -> Component[]
 		this.add(this.entities[entity_id], component_id)
 
@@ -114,38 +137,14 @@ export class ECS<GM, GE> {
 }
 
 //System
-interface ISystem<G, E> {
-	game_mode: G;
-	events: E[];
-	start(w: ECS<G, E>): void;
-	process(w: ECS<G, E>): void;
-	destroy(w: ECS<G, E>): void;
+export interface ISystem {
+	game_mode: number;
+	events: number[];
+	start(w: ECS): void;
+	process(w: ECS): void;
+	destroy(w: ECS): void;
 }
 
-export class PlayerMovementSystem implements ISystem<GameMode, GameEvent> {
-	game_mode: GameMode = GameMode.Running;
-	events: GameEvent[] = [GameEvent.Keyboard, GameEvent.Movement];
-
-	start(_: ECS<GameMode, GameEvent>): void { }
-	destroy(_: ECS<GameMode, GameEvent>): void { }
-
-	process(w: ECS<GameMode, GameEvent>): void {
-		w.query_system
-			.contains([
-				ComponentType.Player
-			])
-			.each((id: number) => {
-				const key = parseInt(`${id}${ComponentType.Position}`)
-				const position: PositionData = w.components[w.ect[key]]
-				if (!position) { return }
-				w.components[w.ect[key]] = {
-					x: position.x + 1,
-					y: position.y + 1,
-					z: position.z + 1,
-				};
-			})
-	}
-}
 
 export type EventCall<T> = {
 	type: T,
@@ -154,17 +153,130 @@ export type EventCall<T> = {
 
 //EventManager
 export class EventManager<T> {
-	events: T[] = [];
+	queue: T[] = [];
 
 	next(): T | undefined {
-		return this.events.pop();
+		return this.queue.shift();
 	}
 
 	hasEvents(): boolean {
-		return this.events.length !== 0;
+		return this.queue.length !== 0;
 	}
 
 	register(event: EventCall<T>) {
-		this.events.push(event.type);
+		this.queue.push(event.type);
+	}
+}
+
+//Query
+export class Query {
+	world: ECS;
+
+	entities: any[] = []
+	data: any[] = []
+
+	filter_contains: number[] = []
+	filter_not_contains: number[] = []
+	filter_component: number = 0;
+
+	constructor(w: ECS) {
+		this.world = w;
+	}
+
+	contains(ct: number[] | number) {
+		if (Array.isArray(ct)) {
+			this.filter_contains = ct;
+		} else {
+			this.filter_contains.push(ct)
+		}
+		return this;
+	}
+
+	not_contains(ct: number[] | number) {
+		if (Array.isArray(ct)) {
+			this.filter_not_contains = ct;
+		} else {
+			this.filter_not_contains.push(ct)
+		}
+		return this;
+	}
+
+	get_component(ct: number) {
+		this.filter_component = ct;
+		return this;
+	}
+
+	each(fn: Function) {
+		this.run();
+		for (const entity of this.entities) {
+			fn(entity)
+		}
+	}
+
+	get_entities(): number[] {
+		this.run();
+		return this.entities;
+	}
+
+	run() {
+		this.entities = this.queryEntitiesByCtGroup(this.filter_contains)
+	}
+
+	queryComponentByType<T>(ct: number): T[] {
+		const result: T[] = [];
+		const entities = this.world.cte[ct] || [];
+
+		entities.forEach(entity_id => {
+			const key = `${entity_id}${ct}`;
+			const component_id = this.world.ect[parseInt(key)];
+			result.push(this.world.components[component_id]);
+		});
+
+		return result;
+	}
+
+	queryEntitiesByCtGroup(cts: number[]): any[] {
+		if (cts.length === 1) { return this.world.cte[cts[0]] }
+
+		const groups: number[][] = cts.map(ct => this.world.cte[ct] || []);
+		const pass: number[] = []
+		const entityCount: Record<number, number> = [];
+
+		groups.forEach(group => {
+			group.forEach(entity_id => {
+				if (entityCount[entity_id] === undefined) {
+					entityCount[entity_id] = 0;
+				}
+				entityCount[entity_id]++;
+			});
+		});
+
+		const requiredCount = cts.length;
+
+		Object.keys(entityCount).forEach(entity_id => {
+			if (entityCount[parseInt(entity_id)] === requiredCount) {
+				let containsAll = true;
+
+				for (const ct of cts) {
+					if (!this.world.e_ct[parseInt(entity_id)].includes(ct)) {
+						containsAll = false;
+						break;
+					}
+				}
+
+				if (containsAll) {
+					pass.push(parseInt(entity_id));
+				}
+			}
+		}); return pass;
+	}
+
+	queryComponentByCtFromEntities(entities: number[], ct: number): any[] {
+		const components = []
+		for (const id of entities) {
+			const key = parseInt(`${id}${ct}`)
+			components.push(this.world.ect[key])
+		}
+		return components;
 	}
 }
