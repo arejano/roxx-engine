@@ -1,20 +1,19 @@
-import { ECS, MovementSystem, PlayerMovementSystem, PositionData } from "../src/ecs";
-import { ComponentType } from "../src/enums";
+import { ECS, EventCall, PlayerMovementSystem, PositionData } from "../src/ecs";
+import { ComponentType, GameEvent, GameMode } from "../src/enums";
 
 jest.useFakeTimers();
 
 describe('World', () => {
-	var ecs = new ECS();
+	var ecs = new ECS<GameMode, GameEvent>();
 	var player = undefined;
 	var enemy = undefined;
 
 	var qt_random: number = 10;
-
 	var global_query: any = undefined;
-
 	var query_many: { [key: number]: number[] };
 
-	const player_move_system = new PlayerMovementSystem();
+	var loop_counter = 0;
+	var loop_max_counter = 1;
 
 	var log_table = {
 		qt_entidades: 0,
@@ -22,13 +21,28 @@ describe('World', () => {
 		qt_tipos_componentes: 0,
 		qt_entity_ct_to_components: 0,
 		qt_position_entity: 0,
-		qt_query_many: 0
+		qt_query_many: 0,
+		qt_systems: 0,
+		qt_ge_systems: 0,
+		loops: loop_counter,
 	}
 
 	it('Start ECS', () => {
-		ecs = new ECS();
+		ecs.addSystem(new PlayerMovementSystem())
+		ecs.setGameMode(GameMode.Running);
 		expect(ecs).toBeInstanceOf(ECS);
 	});
+
+
+	it('Register Event', () => {
+		const eventCall: EventCall<GameEvent.Keyboard> = {
+			type: GameEvent.Keyboard,
+			data: null
+		}
+		ecs.registerEvent(eventCall)
+		expect(ecs).toBeInstanceOf(ECS);
+	});
+
 
 	it("Create Entity", () => {
 		player = ecs.addEntity([
@@ -68,13 +82,13 @@ describe('World', () => {
 	})
 
 	it('QueryComponentsByType', () => {
-		const query: PositionData[] = ecs.queryComponentByType<PositionData>(ComponentType.Position);
+		const query: PositionData[] = ecs.query_system.queryComponentByType<PositionData>(ComponentType.Position);
 		log_table.qt_position_entity = query.length;
 		expect(ecs).toBeInstanceOf(ECS);
 	});
 
 	it('QueryEntitiesByCtGroup', () => {
-		query_many = ecs.queryEntitiesByCtGroup([
+		query_many = ecs.query_system.queryEntitiesByCtGroup([
 			ComponentType.Player,
 			ComponentType.Position,
 			ComponentType.Bullet,
@@ -86,45 +100,36 @@ describe('World', () => {
 	});
 
 
-	it("Update Counters", () => {
-		log_table.qt_entidades = Object.keys(ecs.entities).length;
-		log_table.qt_componentes = Object.keys(ecs.components).length;
-		log_table.qt_tipos_componentes = Object.keys(ecs.ct).length
-		log_table.qt_entity_ct_to_components = Object.keys(ecs.ect).length
-		expect(ecs).toBeInstanceOf(ECS);
-	})
-
-
-	// it("TestSystem", () => {
-	// 	// const mv = new MovementSystem();
-	// 	// console.log(query)
-	// 	// mv.process(ecs);
-	// 	// const query: PositionData[] = ecs.queryComponentByType<PositionData>(ComponentType.Position);
-	// 	// console.log(query)
-	// 	expect(ecs).toBeInstanceOf(ECS);
-	// })
-
-
 	it("PlayerMovementSystem", () => {
-		player_move_system.process(ecs);
-		player_move_system.process(ecs);
-		player_move_system.process(ecs);
-		player_move_system.process(ecs);
-		player_move_system.process(ecs);
-		player_move_system.process(ecs);
+		while (loop_counter <= loop_max_counter) {
+			ecs.update()
+			loop_counter++;
+		}
 		expect(ecs).toBeInstanceOf(ECS);
 	})
 
 	it("UpdateGlobalQuery", () => {
-		global_query = ecs.queryComponentByType<PositionData>(ComponentType.Position)
+		global_query = ecs.query_system.queryComponentByType<PositionData>(ComponentType.Position)
 			.slice(0, 2);
 		expect(ecs).toBeInstanceOf(ECS);
 	})
 
 
+
+	it("Update Counters", () => {
+		log_table.qt_entidades = Object.keys(ecs.entities).length;
+		log_table.qt_componentes = Object.keys(ecs.components).length;
+		log_table.qt_tipos_componentes = Object.keys(ecs.ct).length
+		log_table.qt_entity_ct_to_components = Object.keys(ecs.ect).length
+		log_table.loops = loop_counter;
+		log_table.qt_systems = Object.keys(ecs.systems).length;
+		log_table.qt_ge_systems = Object.keys(ecs.ge_systems).length;
+		expect(ecs).toBeInstanceOf(ECS);
+	})
+
 	it('Console', () => {
 		// console.table(log_table)
-		// console.log(global_query)
+		console.log(global_query)
 	});
 })
 
