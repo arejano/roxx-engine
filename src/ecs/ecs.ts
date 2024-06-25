@@ -36,29 +36,31 @@ export class ECS {
 		this.tick_mode = tm;
 	}
 
-	registerEvent(event: EventCall<number>) {
+	registerEvent(event: EventCall<number, any>) {
 		this.pool_event.register(event);
 	}
 
-	update() {
+	update(dt: number) {
+		//Nao fazer update se nao temos entidade
+		if (Object.keys(this.entities).length === 0) { return }
+
 		if (!this.game_mode) { return }
 		//Run Systems by Event
 		while (this.pool_event.hasEvents()) {
 			const event = this.pool_event.next();
-			const key = parseInt(`${this.game_mode}${event}`)
+			const key = parseInt(`${this.game_mode}${event?.type}`)
 
 			if (this.ge_systems[key]) {
 				const systems = Object.values(this.ge_systems[key])
 
 				for (const system of systems) {
-					this.systems[system].process(this)
+					this.systems[system].process(this, dt, event)
 				}
 			}
 		}
 
 		//Run Tick Systems
 		const tick_key = parseInt(`${this.actual_mode}${this.tick_mode}`)
-		console.log(tick_key)
 		if (!this.ge_systems[tick_key]) {
 			console.log("NULL - RenderSystem")
 			return
@@ -66,8 +68,8 @@ export class ECS {
 
 			for (const system of this.ge_systems[tick_key]) {
 				if (this.systems[system]) {
-					this.systems[system].process(this)
-				}else{
+					this.systems[system].process(this, dt)
+				} else {
 					console.log("SystemError")
 				}
 			}
@@ -107,6 +109,7 @@ export class ECS {
 		}
 
 		this.systems[system_id] = system;
+		system.start(this)
 	}
 
 	registerComponent(entity_id: number, ct: number, component_id: number) {
@@ -141,21 +144,21 @@ export interface ISystem {
 	game_mode: number;
 	events: number[];
 	start(w: ECS): void;
-	process(w: ECS): void;
+	process(w: ECS, dt: number, event?: any): void;
 	destroy(w: ECS): void;
 }
 
 
-export type EventCall<T> = {
+export type EventCall<T, D> = {
 	type: T,
-	data: any;
+	data: D;
 }
 
 //EventManager
 export class EventManager<T> {
-	queue: T[] = [];
+	queue: EventCall<T, any>[] = [];
 
-	next(): T | undefined {
+	next(): EventCall<T, any> | undefined {
 		return this.queue.shift();
 	}
 
@@ -163,8 +166,8 @@ export class EventManager<T> {
 		return this.queue.length !== 0;
 	}
 
-	register(event: EventCall<T>) {
-		this.queue.push(event.type);
+	register(event: EventCall<T, any>) {
+		this.queue.push(event);
 	}
 }
 
