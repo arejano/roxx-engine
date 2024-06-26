@@ -98,6 +98,7 @@ export class ECS {
 	}
 
 	addSystem(system: ISystem) {
+		system.start(this)
 		const system_id = counter_system++;
 
 		for (const se of system.events) {
@@ -109,7 +110,6 @@ export class ECS {
 		}
 
 		this.systems[system_id] = system;
-		system.start(this)
 	}
 
 	registerComponent(entity_id: number, ct: number, component_id: number) {
@@ -211,6 +211,9 @@ export class Query {
 
 	each(fn: Function) {
 		this.run();
+		if (this.entities === undefined) {
+			return
+		}
 		for (const entity of this.entities) {
 			fn(entity)
 		}
