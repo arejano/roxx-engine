@@ -9,19 +9,19 @@ export class ECS {
 	game_mode: number | null = null;
 	tick_mode: number | null = null;
 
-	actual_mode: number | null = null;
+	running_mode: number | null = null;
 
 	//Entity_ComponentType -> Component
-	ect: Record<number, number> = [];
-	cte: Record<number, number[]> = []
-	ct: Record<number, any> = [];
-	entities: Record<number, number[]> = [];
+	ect: Record<number, number> = {};
+	cte: Record<number, number[]> = {};
+	ct: Record<number, any> = {};
+	entities: Record<number, number[]> = {};
 	components: Record<number, any> = [];
 
-	e_ct: Record<number, number[]> = [];
+	e_ct: Record<number, number[]> = {};
 
-	systems: Record<number, ISystem> = [];
-	ge_systems: Record<number, number[]> = [];
+	systems: Record<number, ISystem> = {};
+	ge_systems: Record<number, number[]> = {};
 
 	constructor() {
 		this.query_system = new Query(this);
@@ -29,7 +29,7 @@ export class ECS {
 
 	setGameMode(gm: number) {
 		this.game_mode = gm;
-		this.actual_mode = this.game_mode;
+		this.running_mode = this.game_mode;
 	}
 
 	setTickMode(tm: number) {
@@ -44,12 +44,23 @@ export class ECS {
 		//Nao fazer update se nao temos entidade
 		if (Object.keys(this.entities).length === 0) { return }
 
-		if (!this.game_mode) { return }
+		//Incluir Tick no loop
+		if (this.game_mode == this.running_mode) {
+			const eventCall: EventCall<number, number> = {
+				type: this.tick_mode || 0,
+				data: 0
+			};
+			this.registerEvent(eventCall)
+		}
+
 		//Run Systems by Event
 		while (this.pool_event.hasEvents()) {
+			console.log("ProcessingEvent")
 			const event = this.pool_event.next();
 			const key = parseInt(`${this.game_mode}${event?.type}`)
 
+			// event?.type
+			// console.log(key)
 			if (this.ge_systems[key]) {
 				const systems = Object.values(this.ge_systems[key])
 
@@ -60,20 +71,20 @@ export class ECS {
 		}
 
 		//Run Tick Systems
-		const tick_key = parseInt(`${this.actual_mode}${this.tick_mode}`)
-		if (!this.ge_systems[tick_key]) {
-			console.log("NULL - RenderSystem")
-			return
-		} else {
+		// const tick_key = parseInt(`${this.actual_mode}${this.tick_mode}`)
+		// if (!this.ge_systems[tick_key]) {
+		// 	console.log("NULL - RenderSystem")
+		// 	return
+		// } else {
 
-			for (const system of this.ge_systems[tick_key]) {
-				if (this.systems[system]) {
-					this.systems[system].process(this, dt)
-				} else {
-					console.log("SystemError")
-				}
-			}
-		}
+		// 	for (const system of this.ge_systems[tick_key]) {
+		// 		if (this.systems[system]) {
+		// 			this.systems[system].process(this, dt)
+		// 		} else {
+		// 			console.log("SystemError")
+		// 		}
+		// 	}
+		// }
 	}
 
 	addEntity(components: { type: number, data: any }[]): number {
@@ -101,12 +112,15 @@ export class ECS {
 		system.start(this)
 		const system_id = counter_system++;
 
-		for (const se of system.events) {
-			const key = parseInt(`${system.game_mode}${se}`)
-			if (!this.ge_systems[key]) {
-				this.ge_systems[key] = []
+		for (const game_mode of system.game_mode) {
+			for (const se of system.events) {
+				const key = parseInt(`${game_mode}${se}`)
+				if (!this.ge_systems[key]) {
+					this.ge_systems[key] = [system_id]
+				} else {
+					this.ge_systems[key].push(system_id)
+				}
 			}
-			this.ge_systems[key].push(system_id)
 		}
 
 		this.systems[system_id] = system;
@@ -137,11 +151,17 @@ export class ECS {
 			list.push(item)
 		}
 	}
+
+	getComponent<T>(entity: number, ct: number): any {
+		const key = parseInt(`${entity}${ct}`)
+		const component: T = this.components[this.ect[key]]
+		return component;
+	}
 }
 
 //System
 export interface ISystem {
-	game_mode: number;
+	game_mode: number[];
 	events: number[];
 	start(w: ECS): void;
 	process(w: ECS, dt: number, event?: any): void;
@@ -157,9 +177,15 @@ export type EventCall<T, D> = {
 //EventManager
 export class EventManager<T> {
 	queue: EventCall<T, any>[] = [];
+	finished: EventCall<T, any>[] = [];
+
+	qt_remove_log: number = 100;
+	max_log: number = 1000;
 
 	next(): EventCall<T, any> | undefined {
-		return this.queue.shift();
+		const called: EventCall<T, any> | undefined = this.queue.shift();
+		this.addToFinished(called);
+		return called
 	}
 
 	hasEvents(): boolean {
@@ -168,6 +194,14 @@ export class EventManager<T> {
 
 	register(event: EventCall<T, any>) {
 		this.queue.push(event);
+	}
+
+	addToFinished(event: EventCall<T, any> | undefined) {
+		if (!event) { return }
+		if (this.finished.length > this.max_log) {
+			this.finished.splice(this.qt_remove_log);
+		}
+		this.finished.push(event)
 	}
 }
 

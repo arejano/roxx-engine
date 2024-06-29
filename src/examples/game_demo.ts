@@ -1,9 +1,9 @@
-import { BodyData, CameraData, CanvasData, PositionData, SpeedData } from "../ecs/components_data";
+import { BodyData, CameraData, CanvasData, PositionData, RenderableData, RotationData, SpeedData } from "../ecs/components_data";
 import { ECS, EventCall, ISystem } from "../ecs/ecs";
 import * as THREE from 'three';
 
 export class PlayerMovementSystem implements ISystem {
-	game_mode: GameMode = GameMode.Running;
+	game_mode: GameMode[] = [GameMode.Running];
 	events: GameEvent[] = [GameEvent.Keyboard];
 
 	start(_: ECS): void { }
@@ -25,16 +25,16 @@ export class PlayerMovementSystem implements ISystem {
 
 				switch (event.data) {
 					case MovementDirection.Up:
-						w.components[w.ect[key]].y = w.components[w.ect[key]].y += -speed.speed * dt
+						position.z += -speed.speed * dt
 						break;
 					case MovementDirection.Down:
-						w.components[w.ect[key]].y = w.components[w.ect[key]].y += speed.speed * dt
+						position.z += speed.speed * dt
 						break;
 					case MovementDirection.Left:
-						w.components[w.ect[key]].x = w.components[w.ect[key]].x += -speed.speed * dt
+						position.x += -speed.speed * dt
 						break;
 					case MovementDirection.Right:
-						w.components[w.ect[key]].x = w.components[w.ect[key]].x += speed.speed * dt
+						position.x += speed.speed * dt
 						break;
 					case MovementDirection.UpLeft:
 					case MovementDirection.UpRight:
@@ -45,24 +45,71 @@ export class PlayerMovementSystem implements ISystem {
 	}
 }
 
-export class KeyboardSystem implements ISystem {
-	game_mode: GameMode = GameMode.Running;
-	events: GameEvent[] = [];
 
-	private keyDownHandlers: { [key: string]: () => void } = {}
-	private keyUpHandlers: { [key: string]: () => void } = {}
+
+export class DebugSystem implements ISystem {
+	game_mode: GameMode[] = [GameMode.Running, GameMode.Pause];
+	events: GameEvent[] = [GameEvent.Tick];
+
+	start(w: ECS): void {
+		// console.log(w)
+		// console.log(w.ge_systems)
+		// console.log(w.systems)
+	}
+	destroy(_: ECS): void { }
+
+	process(_w: ECS, _dt: number, _event: EventCall<GameEvent.Keyboard, MovementDirection>): void {
+	}
+}
+
+
+
+export class KeySystem {
+	keyDownHandlers: { [key: string]: () => void } = {}
+	keyUpHandlers: { [key: string]: () => void } = {}
+
+	onKeyDownEvent(event: KeyboardEvent) {
+		const handler = this.keyDownHandlers[event.key];
+		if (handler) {
+			handler();
+		}
+	}
+	onKeyUpEvent(event: KeyboardEvent) {
+		const handler = this.keyUpHandlers[event.key];
+		if (handler) {
+			handler();
+		}
+	}
+	public onKeyDown(key: string, handler: () => void) {
+		this.keyDownHandlers[key] = handler;
+	}
+	public onKeyUp(key: string, handler: () => void) {
+		this.keyUpHandlers[key] = handler;
+	}
+}
+
+
+export class KeyboardSystem extends KeySystem implements ISystem {
+	game_mode: GameMode[] = [GameMode.Running];
+	events: GameEvent[] = [];
 
 	move_keys: { key: string, direction: MovementDirection }[] = [
 		// { key: 'ArrowUp', direction: MovementDirection.Up },
 		// { key: 'ArrowDown', direction: MovementDirection.Down },
 		{ key: 'ArrowLeft', direction: MovementDirection.Left },
 		{ key: 'ArrowRight', direction: MovementDirection.Right },
-		// { key: 'w', direction: MovementDirection.Up },
+		{ key: 'w', direction: MovementDirection.Up },
 		{ key: 'a', direction: MovementDirection.Left },
-		// { key: 's', direction: MovementDirection.Down },
+		{ key: 's', direction: MovementDirection.Down },
 		{ key: 'd', direction: MovementDirection.Right },
 		//Jump
 		{ key: ' ', direction: MovementDirection.Up },
+	]
+
+
+	menu_keys: { key: string, event: GameKeyboardEvent }[] = [
+		{ key: 'p', event: GameKeyboardEvent.Pause },
+		{ key: 'P', event: GameKeyboardEvent.Pause }
 	]
 
 	start(w: ECS): void {
@@ -78,28 +125,16 @@ export class KeyboardSystem implements ISystem {
 				w.registerEvent(eventCall)
 			});
 		}
-	}
 
-	private onKeyDownEvent(event: KeyboardEvent) {
-		const handler = this.keyDownHandlers[event.key];
-		if (handler) {
-			handler();
+		for (const key of this.menu_keys) {
+			this.onKeyDown(key.key, () => {
+				const eventCall: EventCall<GameEvent.MenuKeyboard, GameKeyboardEvent> = {
+					type: GameEvent.MenuKeyboard,
+					data: key.event
+				}
+				w.registerEvent(eventCall)
+			});
 		}
-	}
-
-	private onKeyUpEvent(event: KeyboardEvent) {
-		const handler = this.keyUpHandlers[event.key];
-		if (handler) {
-			handler();
-		}
-	}
-
-	public onKeyDown(key: string, handler: () => void) {
-		this.keyDownHandlers[key] = handler;
-	}
-
-	public onKeyUp(key: string, handler: () => void) {
-		this.keyUpHandlers[key] = handler;
 	}
 
 	destroy(_: ECS): void { }
@@ -108,8 +143,29 @@ export class KeyboardSystem implements ISystem {
 }
 
 
+export class GameKeyboardSystem extends KeySystem implements ISystem {
+	game_mode: GameMode[] = [GameMode.Running, GameMode.Pause];
+	events: GameEvent[] = [GameEvent.MenuKeyboard];
+
+
+	constructor() {
+		super()
+	}
+	start(_w: ECS): void { }
+	destroy(_: ECS): void { }
+
+	process(w: ECS, _dt: number, _event: EventCall<GameEvent.Keyboard, GameKeyboardEvent>): void {
+		console.log("Change Game Mode via System")
+		if (w.game_mode == GameMode.Running) {
+			w.game_mode = GameMode.Pause
+		} else {
+			w.game_mode = GameMode.Running
+		}
+	}
+}
+
 export class EnemyMovementSystem implements ISystem {
-	game_mode: GameMode = GameMode.Running;
+	game_mode: GameMode[] = [GameMode.Running];
 	events: GameEvent[] = [GameEvent.EnemyKeyboard];
 
 	start(_: ECS): void { }
@@ -133,105 +189,8 @@ export class EnemyMovementSystem implements ISystem {
 	}
 }
 
-
-export class RenderSystem2D implements ISystem {
-	game_mode: GameMode = GameMode.Running;
-	events: GameEvent[] = [GameEvent.Tick];
-
-	resolutions = {
-		small: { w: 800, h: 600 },
-		developer: { w: 1366, h: 768 },
-		release: { w: 1920, h: 1080 }
-	}
-
-	private ctx: CanvasRenderingContext2D | null = null;
-
-	start(w: ECS): void {
-		window.addEventListener('resize', () => {
-			this.updateCanvasSize(w);
-		});
-
-		w.query_system
-			.contains([ComponentType.Canvas])
-			.each((entity: number) => {
-
-				const canvas_key = parseInt(`${entity}${ComponentType.Canvas}`)
-				const canvas_component: CanvasData = w.components[w.ect[canvas_key]]
-
-				const canvas = document.createElement('canvas');
-				canvas.width = canvas_component.w
-				canvas.height = canvas_component.h
-				this.ctx = canvas.getContext('2d');
-
-				if (this.ctx) {
-					document.body.appendChild(this.ctx.canvas)
-				}
-
-			})
-	}
-
-	updateCanvasSize(w: ECS) {
-		w.query_system
-			.contains([ComponentType.Canvas])
-			.each((entity: number) => {
-				console.log("Atualizando o resize da camera")
-
-				// const canvas_key = parseInt(`${entity}${ComponentType.Canvas}`)
-				// const canvas_component: CanvasData = w.components[w.ect[canvas_key]]
-
-				// const canvas = document.createElement('canvas');
-				// canvas.width = canvas_component.w
-				// canvas.height = canvas_component.h
-				// this.ctx = canvas.getContext('2d');
-
-				// if (this.ctx) {
-				// 	document.body.appendChild(this.ctx.canvas)
-				// }
-
-			})
-	}
-
-	process(w: ECS): void {
-		w.query_system
-			.contains([
-				ComponentType.Canvas
-			])
-			.each((entity: number) => {
-
-				const canvas_key = parseInt(`${entity}${ComponentType.Canvas}`)
-				const canvas_component: CanvasData = w.components[w.ect[canvas_key]]
-
-				if (this.ctx) {
-					this.ctx.clearRect(0, 0, canvas_component.w, canvas_component.h);
-					this.ctx.fillStyle = canvas_component.fillColor;
-					this.ctx.fillRect(0, 0, canvas_component.w, canvas_component.h);
-				}
-			})
-
-		w.query_system
-			.contains([
-				ComponentType.Renderable
-			])
-			.each((entity: number) => {
-				const position_key = parseInt(`${entity}${ComponentType.Position}`)
-				const position: PositionData = w.components[w.ect[position_key]]
-
-				const body_key = parseInt(`${entity}${ComponentType.Body}`)
-				const body: BodyData = w.components[w.ect[body_key]]
-
-				if (this.ctx && position && body) {
-					this.ctx.fillStyle = body.color;
-					this.ctx.fillRect(position.x, position.y, body.w, body.h);
-				}
-			})
-	}
-
-	destroy(_: ECS): void { }
-}
-
-
 export class THREEJSRenderSystem implements ISystem {
-	game_mode: GameMode = GameMode.Running;
+	game_mode: GameMode[] = [GameMode.Running];
 	events: GameEvent[] = [GameEvent.Tick];
 
 	resolutions = {
@@ -254,10 +213,13 @@ export class THREEJSRenderSystem implements ISystem {
 	scene: THREE.Scene
 
 	canvasId: string = "gameCanvas";
+	world: ECS;
 
 	start(w: ECS): void {
+		this.world = w;
+
 		window.addEventListener('resize', () => {
-			this.updateCanvasSize(w);
+			this.updateCanvasSize();
 		});
 
 		this.canvas = document.getElementById(this.canvasId) as HTMLCanvasElement;
@@ -268,8 +230,9 @@ export class THREEJSRenderSystem implements ISystem {
 		w.query_system
 			.contains([ComponentType.Camera])
 			.each((entity: number) => {
-				const camera_key = parseInt(`${entity}${ComponentType.Camera}`)
-				const camera: CameraData = w.components[w.ect[camera_key]]
+				const camera: CameraData = this.world.getComponent(entity, ComponentType.Camera)
+				const cameraPosition: PositionData = this.world.getComponent(entity, ComponentType.Position);
+				console.log(camera)
 				this.camera = new THREE.OrthographicCamera(
 					-camera.D * this.aspect,
 					camera.D * this.aspect,
@@ -279,19 +242,26 @@ export class THREEJSRenderSystem implements ISystem {
 					1000,
 				)
 				this.camera.zoom = camera.zoom;
+				this.camera.position.set(cameraPosition.x, cameraPosition.y, cameraPosition.z)
+
+				this.camera.lookAt(this.scene.position)
+				const rotation: RotationData = this.world.getComponent(entity, ComponentType.Rotation)
+				rotation.x = this.camera.rotation.x;
+				rotation.y = this.camera.rotation.y;
+				rotation.z = this.camera.rotation.z;
 			})
 
-		const geometry = new THREE.BoxGeometry(0.32, 0.64, 0.10)
+		w.query_system
+			.contains([ComponentType.Renderable])
+			.each((entity: number) => {
+				const renderable: RenderableData = this.world.getComponent(entity, ComponentType.Renderable)
 
-		// const material = new THREE.MeshPhongMaterial({
-		// 	color: 0xFFFFFF,
-		// 	// specular: 0xffffff,
-		// 	// shininess: 100,
-		// });
+				if (!renderable.mesh) {
+					renderable.mesh = new THREE.Mesh(renderable.geometry, renderable.material);
+				}
 
-		const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-		const cube = new THREE.Mesh(geometry, material)
-		this.scene.add(cube)
+				this.scene.add(renderable.mesh);
+			})
 
 		this.scene.add(new THREE.AmbientLight(0xFFFFFF))
 
@@ -299,8 +269,6 @@ export class THREEJSRenderSystem implements ISystem {
 		light.position.set(10, 30, 15);
 		this.scene.add(light)
 
-		this.camera.position.set(20, 20, 20)
-		this.camera.lookAt(this.scene.position)
 	}
 
 	render() {
@@ -311,12 +279,16 @@ export class THREEJSRenderSystem implements ISystem {
 
 	}
 
-	updateCanvasSize(_: ECS) {
-		// w.query_system
-		// 	.contains([ComponentType.Canvas])
-		// 	.each((_: number) => {
-		// 		console.log("Atualizando o resize da camera")
-		// 	})
+	updateCanvasSize() {
+		this.world.query_system
+			.contains([ComponentType.Canvas])
+			.each((entity: number) => {
+				const canvas: CanvasData = this.world.getComponent(entity, ComponentType.Canvas)
+				canvas.h = window.innerHeight;
+				canvas.w = window.innerWidth;
+				this.renderer.setSize(canvas.w, canvas.h);
+			})
+
 	}
 
 	process(w: ECS): void {
@@ -325,32 +297,31 @@ export class THREEJSRenderSystem implements ISystem {
 				ComponentType.Camera
 			])
 			.each((entity: number) => {
-				const camera_key = parseInt(`${entity}${ComponentType.Camera}`)
-				const camera: CameraData = w.components[w.ect[camera_key]]
+				const camera: CameraData = this.world.getComponent(entity, ComponentType.Camera)
+				const position: PositionData = this.world.getComponent(entity, ComponentType.Position)
+				const rotation: RotationData = this.world.getComponent(entity, ComponentType.Rotation)
 				this.camera.near = camera.near;
 				this.camera.far = camera.far;
 				this.camera.zoom = camera.zoom;
+				this.camera.rotation.z = rotation.z;
+				this.camera.rotation.y = rotation.y;
+				this.camera.rotation.z = rotation.z;
 				this.camera.updateProjectionMatrix()
 			})
 
-
+		// Atualize a posição dos objetos renderizáveis
 		w.query_system
-			.contains([
-				ComponentType.Renderable
-			])
-			.each((_: number) => {
-				// console.log(entity)
-				// const position_key = parseInt(`${entity}${ComponentType.Position}`)
-				// const position: PositionData = w.components[w.ect[position_key]]
+			.contains([ComponentType.Renderable, ComponentType.Position])
+			.each((entity: number) => {
 
-				// const body_key = parseInt(`${entity}${ComponentType.Body}`)
-				// const body: BodyData = w.components[w.ect[body_key]]
+				const renderable = this.world.getComponent(entity, ComponentType.Renderable)
+				const position: PositionData = this.world.getComponent(entity, ComponentType.Position)
 
-				// if (this.ctx && position && body) {
-				// 	this.ctx.fillStyle = body.color;
-				// 	this.ctx.fillRect(position.x, position.y, body.w, body.h);
-				// }
-			})
+				if (renderable && position && renderable.mesh) {
+					renderable.mesh.position.set(position.x, position.y, position.z);
+				}
+			});
+
 		this.render();
 	}
 
@@ -381,6 +352,7 @@ export enum ComponentType {
 
 	//Transforms
 	Position,
+	Rotation,
 	Orientation,
 	Scale,
 	Body,
@@ -399,7 +371,8 @@ export enum ComponentType {
 
 
 	//Develop
-	Developer
+	Developer,
+	CameraControl,
 }
 
 export enum MovementDirection {
@@ -411,6 +384,10 @@ export enum MovementDirection {
 	UpRight,
 	DownLeft,
 	DownRight
+}
+
+export enum GameKeyboardEvent {
+	Pause,
 }
 
 export enum GameMode {
@@ -428,6 +405,9 @@ export enum GameEvent {
 	Tick,
 	Movement,
 	Keyboard,
+	MenuKeyboard,
 	EnemyKeyboard,
-	CameraZoom
+	CameraZoom,
+	CameraMouse
 }
+
