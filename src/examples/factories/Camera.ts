@@ -9,12 +9,12 @@ export const camera = [
   {
     type: ComponentType.Camera,
     data: {
-      fov: 30,
+      fov: 45,
       aspect: 0,
       near: 0.1,
       far: 1000,
-      D: 1,
-      zoom: 0.2,
+      D: 2,
+      zoom: 1,
       zoomFactor: 2,
       maxZoom: 2,
       minZoom: 0.2,
@@ -25,7 +25,7 @@ export const camera = [
     }
   },
   { type: ComponentType.CameraControl, data: control_data },
-  { type: ComponentType.Position, data: { x: 5, y: 2, z: 5 } },
+  { type: ComponentType.Position, data: { x: 20, y: 20, z: 20 } },
   { type: ComponentType.Rotation, data: { x: 0, y: 0, z: 0 } }
 ]
 export const canvas = [

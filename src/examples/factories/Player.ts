@@ -10,7 +10,6 @@ const textureLoader = new THREE.TextureLoader();
 const texture = textureLoader.load(
   "../assets/sky_cube.jpg"
 )
-console.log(texture)
 
 
 const geometry = new THREE.BoxGeometry(body_player.w, body_player.h, body_player.depth)
@@ -31,6 +30,7 @@ export const player = [
   { type: ComponentType.Name, data: { name: "Brutus - Player" } },
   { type: ComponentType.Direction, data: { direction: 0 } },
   { type: ComponentType.Position, data: { x: 0.5, y: 1, z: 0.5 } },
+  { type: ComponentType.Rotation, data: { x: 0.5, y: 1, z: 0.5 } },
   { type: ComponentType.Body, data: body_player },
   { type: ComponentType.Movable, data: true },
   { type: ComponentType.Health, data: { life: 100 } },

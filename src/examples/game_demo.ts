@@ -15,6 +15,9 @@ import { plane } from './factories/Plane';
 import { CameraZoomSystem } from './systems/CameraZoomSystem';
 import { CameraControlSystem } from './systems/CameraControllerSystem';
 import { skybox } from './factories/SkyBox';
+import { DatGUISystem } from './systems/DatGuiSystem';
+import { d1, d2, lights } from './factories/DirectionalLight';
+
 
 export class GameDemo {
   world: ECS;
@@ -27,10 +30,13 @@ export class GameDemo {
     this.world.addEntity(camera)
     this.world.addEntity(canvas)
     this.world.addEntity(grid_helper)
-  
+
     this.world.addEntity(plane)
     this.world.addEntity(skybox)
-  
+
+    for (const l of lights) {
+      this.world.addEntity(l)
+    }
 
     //Conjunto Keyboard
     this.world.addSystem(new KeyboardSystem())
@@ -42,6 +48,7 @@ export class GameDemo {
     this.world.addSystem(new PlayerMovementSystem())
     this.world.addSystem(new RenderSystem())
     this.world.addSystem(new DebugSystem())
+    this.world.addSystem(new DatGUISystem())
 
     this.world.setGameMode(GameMode.Running)
     this.world.setTickMode(GameEvent.Tick)
@@ -50,5 +57,9 @@ export class GameDemo {
   run() {
     this.engine = new Engine(this.world);
     this.engine.start();
+
+    setTimeout(() => {
+      // this.engine?.stop();
+    }, 1000)
   }
 }

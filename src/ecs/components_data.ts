@@ -40,3 +40,21 @@ export type GridHelperData = {
 	colorCenterLine: THREE.Color,
 	colorGrid: THREE.Color
 }
+
+export type MapSize = {
+	width: number,
+	height: number,
+}
+
+export type ShadowLightData = {
+	mapSize: MapSize,
+	camera_near: number,
+	camera_far: number,
+}
+
+export type DirectionalLightData = {
+	shadow: ShadowLightData,
+	castShadow: boolean,
+	color: THREE.Color,
+	intensity: number,
+}

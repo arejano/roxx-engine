@@ -16,7 +16,7 @@ export class ECS {
 	cte: Record<number, number[]> = {};
 	ct: Record<number, any> = {};
 	entities: Record<number, number[]> = {};
-	components: Record<number, any> = [];
+	components: Record<number, any> = {};
 
 	e_ct: Record<number, number[]> = {};
 
@@ -59,8 +59,6 @@ export class ECS {
 			const event = this.pool_event.next();
 			const key = parseInt(`${this.game_mode}${event?.type}`)
 
-			// event?.type
-			// console.log(key)
 			if (this.ge_systems[key]) {
 				const systems = Object.values(this.ge_systems[key])
 
@@ -69,22 +67,6 @@ export class ECS {
 				}
 			}
 		}
-
-		//Run Tick Systems
-		// const tick_key = parseInt(`${this.actual_mode}${this.tick_mode}`)
-		// if (!this.ge_systems[tick_key]) {
-		// 	console.log("NULL - RenderSystem")
-		// 	return
-		// } else {
-
-		// 	for (const system of this.ge_systems[tick_key]) {
-		// 		if (this.systems[system]) {
-		// 			this.systems[system].process(this, dt)
-		// 		} else {
-		// 			console.log("SystemError")
-		// 		}
-		// 	}
-		// }
 	}
 
 	addEntity(components: { type: number, data: any }[]): number {
@@ -130,7 +112,8 @@ export class ECS {
 		//Update: Entity -> Component[]
 		this.add(this.entities[entity_id], component_id)
 
-		if (!this.e_ct[entity_id]) { this.e_ct[entity_id] = [] }
+		if (!this.e_ct[entity_id]) { 
+			this.e_ct[entity_id] = [] }
 		this.add(this.e_ct[entity_id], ct)
 
 		//Update: ComponentType -> Component[]

@@ -35,15 +35,16 @@ export enum ComponentType {
   //Canvas	
   Canvas,
 
-
   //World Physics Blocks
   Floor,
-
 
   //Develop
   Developer,
   CameraControl,
 
-  GridHelper
+  //3d
+  GridHelper,
+  DirectionalLight,
+  AmbientLight,
 }
 
